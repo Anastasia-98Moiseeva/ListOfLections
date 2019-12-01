@@ -1,9 +1,13 @@
 package com.example.listoflections;
 
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Spinner;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,9 +36,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        initRecyclerView();
-        initLecturerSpinner();
-        initWeekSpinner();
+        if(savedInstanceState == null){
+            new LecturesLoading().execute();
+        }
     }
 
     private void initLecturerSpinner() {
@@ -80,18 +84,37 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void initRecyclerView() {
+    private void initRecyclerView(List<Lecture> lectures) {
         RecyclerView recyclerView = findViewById(R.id.lection_recycler);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this,
                 RecyclerView.VERTICAL, false);
         recyclerView.setLayoutManager(layoutManager);
         mLearningProgramAdapter = new LearningProgramAdapter();
-        mLearningProgramAdapter.setLectures(mLearningProgramProvider.provideLectures());
+        mLearningProgramAdapter.setLectures(lectures);
         DividerItemDecoration decoration = new DividerItemDecoration(this,
                 DividerItemDecoration.VERTICAL);
         recyclerView.addItemDecoration(decoration);
         recyclerView.setAdapter(mLearningProgramAdapter);
         Lecture currentLecture = mLearningProgramProvider.getNextLecture(new Date());
-        recyclerView.scrollToPosition(mLearningProgramProvider.provideLectures().indexOf(currentLecture));
+        recyclerView.scrollToPosition(lectures.indexOf(currentLecture));
+    }
+
+    private class LecturesLoading extends AsyncTask<Void, Void, List<Lecture>>{
+
+        @Override
+        protected List<Lecture> doInBackground(Void... voids) {
+            return mLearningProgramProvider.loadFromInternet();
+        }
+
+        @Override
+        protected void onPostExecute(List<Lecture> lectures) {
+            if(lectures != null){
+                initLecturerSpinner();
+                initWeekSpinner();
+                initRecyclerView(lectures);
+            } else {
+                Toast.makeText(getApplicationContext(), "Не удалось загрузить данные", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 }
